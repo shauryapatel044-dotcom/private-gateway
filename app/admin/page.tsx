@@ -25,6 +25,7 @@ interface TransactionItem {
   amount: number;
   status: 'PENDING' | 'SUCCESS' | 'FAILED';
   utr: string | null;
+  apiKeyName?: string | null;
   createdAt: string;
   expiresAt: string;
 }
@@ -306,6 +307,11 @@ export default function AdminOverviewPage() {
                             )}
                           </button>
                         </div>
+                        {tx.apiKeyName && (
+                          <span className="text-[10px] text-amber-400/90 font-sans block mt-0.5">
+                            🔑 {tx.apiKeyName}
+                          </span>
+                        )}
                       </td>
                       <td className="py-3.5 px-4 font-bold text-amber-400 text-sm">
                         ₹{tx.amount.toFixed(2)}

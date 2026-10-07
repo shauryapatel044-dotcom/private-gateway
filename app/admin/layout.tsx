@@ -16,7 +16,8 @@ import {
   Mail,
   Bell,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  KeyRound
 } from 'lucide-react';
 
 export default function AdminLayout({
@@ -92,6 +93,7 @@ export default function AdminLayout({
   const navItems = [
     { label: 'Overview', href: '/admin', icon: LayoutDashboard },
     { label: 'Transactions', href: '/admin#transactions', icon: Receipt },
+    { label: 'API Keys', href: '/admin/api-keys', icon: KeyRound },
     { label: 'Phone Notifications', href: '/admin/notifications', icon: Bell },
     { label: 'OmniCard Gmails', href: '/admin/emails', icon: Mail },
     { label: 'Gateway Settings', href: '/admin/settings', icon: Settings },

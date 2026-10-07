@@ -5,6 +5,37 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
   try {
+    const rawApiKey =
+      req.headers.get('x-api-key') ||
+      req.headers.get('authorization')?.replace(/^Bearer\s+/i, '') ||
+      '';
+
+    let apiKeyName: string | null = null;
+
+    if (rawApiKey && rawApiKey.trim().length > 0) {
+      const apiKeyDoc = await prisma.apiKey.findUnique({
+        where: { key: rawApiKey.trim() },
+      });
+
+      if (!apiKeyDoc || apiKeyDoc.status !== 'ACTIVE') {
+        return NextResponse.json(
+          { error: 'Invalid or revoked API key' },
+          { status: 401 }
+        );
+      }
+
+      apiKeyName = apiKeyDoc.name;
+
+      // Update apiKey stats asynchronously
+      await prisma.apiKey.update({
+        where: { id: apiKeyDoc.id },
+        data: {
+          lastUsed: new Date(),
+          totalOrders: { increment: 1 },
+        },
+      });
+    }
+
     const body = await req.json();
     const { amount, customOrderId } = body;
 
@@ -35,6 +66,7 @@ export async function POST(req: NextRequest) {
         orderId,
         amount: cleanAmount,
         status: 'PENDING',
+        apiKeyName: apiKeyName || 'Testbench / Direct',
         expiresAt,
       },
     });
@@ -47,6 +79,7 @@ export async function POST(req: NextRequest) {
       orderId: transaction.orderId,
       amount: transaction.amount,
       status: transaction.status,
+      apiKey: apiKeyName,
       checkoutUrl,
       expiresAt: transaction.expiresAt.toISOString(),
     });
@@ -59,7 +92,7 @@ export async function POST(req: NextRequest) {
       );
     }
     return NextResponse.json(
-      { error: 'Internal server error while creating order.' },
+      { error: 'Internal server error creating order' },
       { status: 500 }
     );
   }
