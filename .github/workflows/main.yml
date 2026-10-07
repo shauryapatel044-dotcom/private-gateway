@@ -1,0 +1,120 @@
+name: UPI Gateway & Cloudflare Tunnel
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+
+jobs:
+  run-gateway:
+    name: Run Gateway & Public Cloudflare Tunnel
+    runs-on: ubuntu-latest
+    timeout-minutes: 360 # GitHub Actions maximum limit (6 hours)
+
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: ☁️ Install Cloudflare Tunnel (cloudflared)
+        run: |
+          echo "Installing latest cloudflared..."
+          curl -fsSL https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb -o cloudflared.deb
+          sudo dpkg -i cloudflared.deb
+          rm -f cloudflared.deb
+          cloudflared --version
+
+      - name: 📦 Install Dependencies & Generate Prisma Client
+        run: |
+          cat << 'EOF' > .env
+          DATABASE_URL="postgresql://postgres.pbalmdgeqarijsgjkykn:pZL75bYTyI0PIUey@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres?pgbouncer=true"
+          NEXT_PUBLIC_SUPABASE_URL="https://pbalmdgeqarijsgjkykn.supabase.co"
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBiYWxtZGdlcWFyaWpzZ2preWtuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzNDE3MjQsImV4cCI6MjEwNjkxNzcyNH0.ihAMjzHPdOPBc5P8JTqenYrNWw7BcDdkly5o_HzF7_Q"
+          SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBiYWxtZGdlcWFyaWpzZ2preWtuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEzNDE3MjQsImV4cCI6MjEwNjkxNzcyNH0.ihAMjzHPdOPBc5P8JTqenYrNWw7BcDdkly5o_HzF7_Q"
+          SUPABASE_SERVICE_ROLE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBiYWxtZGdlcWFyaWpzZ2preWtuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MTM0MTcyNCwiZXhwIjoyMTA2OTE3NzI0fQ.w5c4k4lmI3qsOaMWbQ2UGn0xgg4z-N7ES585puUlmy8"
+          JWT_SECRET="super-secret-gateway-key-change-in-production-12345"
+          EOF
+
+          npm install
+          npx prisma generate
+
+      - name: 🏗️ Build Next.js Production App
+        run: npm run build
+
+      - name: 🚀 Start Server & Expose Cloudflare Tunnel
+        run: |
+          echo "Starting Next.js production server on port 3000..."
+          npm start &
+          SERVER_PID=$!
+
+          # Wait for local server to respond
+          echo "Waiting for local server to boot..."
+          for i in {1..30}; do
+            if curl -s http://localhost:3000 > /dev/null; then
+              echo "✓ Next.js server is responsive on port 3000!"
+              break
+            fi
+            sleep 1
+          done
+
+          # Start Cloudflare Tunnel
+          echo "Launching Cloudflare Quick Tunnel..."
+          cloudflared tunnel --url http://localhost:3000 > tunnel.log 2>&1 &
+          TUNNEL_PID=$!
+
+          # Wait for Cloudflare public URL to be generated
+          echo "Waiting for Cloudflare Tunnel URL..."
+          TUNNEL_URL=""
+          for i in {1..40}; do
+            TUNNEL_URL=$(grep -o 'https://[-a-zA-Z0-9]*\.trycloudflare\.com' tunnel.log | head -n 1 || true)
+            if [ -n "$TUNNEL_URL" ]; then
+              break
+            fi
+            sleep 1
+          done
+
+          if [ -z "$TUNNEL_URL" ]; then
+            echo "❌ Failed to obtain Cloudflare Tunnel URL. Tunnel log:"
+            cat tunnel.log
+            exit 1
+          fi
+
+          # Output URL to GitHub Action Logs
+          echo "============================================================"
+          echo "🎉 UPI GATEWAY IS LIVE ONLINE VIA CLOUDFLARE TUNNEL!"
+          echo "============================================================"
+          echo "🌐 Public URL:        $TUNNEL_URL"
+          echo "🔐 Admin Portal:     $TUNNEL_URL/admin/login"
+          echo "🔑 Admin Username:   admin"
+          echo "🔑 Admin Password:   adminpassword123"
+          echo "📱 Android Webhook:  $TUNNEL_URL/api/notification-webhook"
+          echo "============================================================"
+
+          # Output URL to GitHub Actions Job Summary (Renders in Web UI)
+          cat << EOF >> $GITHUB_STEP_SUMMARY
+          # 🚀 UPI Gateway is Live!
+
+          ### 🌐 Public Cloudflare URL
+          > **[$TUNNEL_URL]($TUNNEL_URL)**
+
+          ---
+
+          ### 🔐 Admin Portal Credentials
+          | Setting | Value |
+          | :--- | :--- |
+          | **Login URL** | [$TUNNEL_URL/admin/login]($TUNNEL_URL/admin/login) |
+          | **Username** | \`admin\` |
+          | **Password** | \`adminpassword123\` |
+          | **Android App Webhook** | \`$TUNNEL_URL/api/notification-webhook\` |
+
+          ---
+          *Running on GitHub Actions with Cloudflare Tunnel.*
+          EOF
+
+          # Keep server alive
+          wait $TUNNEL_PID || wait $SERVER_PID
