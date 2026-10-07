@@ -1,5 +1,5 @@
 datasource db {
-  provider = "mongodb"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -9,7 +9,7 @@ generator client {
 }
 
 model Admin {
-  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  id           String   @id @default(cuid())
   username     String   @unique
   passwordHash String
   createdAt    DateTime @default(now())
@@ -17,7 +17,7 @@ model Admin {
 }
 
 model GatewayConfig {
-  id              String   @id @default("default") @map("_id")
+  id              String   @id @default("default")
   upiId           String   @default("merchant@upi")
   imapEmail       String   @default("")
   imapAppPassword String   @default("")
@@ -26,9 +26,9 @@ model GatewayConfig {
 }
 
 model ApiKey {
-  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  id          String    @id @default(cuid())
   name        String
-  key         String    @unique // e.g. og_live_abc123...
+  key         String    @unique
   status      String    @default("ACTIVE") // ACTIVE, REVOKED
   totalOrders Int       @default(0)
   lastUsed    DateTime?
@@ -37,7 +37,7 @@ model ApiKey {
 }
 
 model Transaction {
-  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  id         String   @id @default(cuid())
   orderId    String   @unique
   amount     Float
   status     String   @default("PENDING") // PENDING, SUCCESS, FAILED
@@ -49,7 +49,7 @@ model Transaction {
 }
 
 model NotificationLog {
-  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  id             String   @id @default(cuid())
   packageName    String   @default("")
   title          String   @default("")
   text           String   @default("")

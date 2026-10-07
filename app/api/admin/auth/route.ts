@@ -7,12 +7,12 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: NextRequest) {
   try {
     // 1. Verify DATABASE_URL exists in environment
-    if (!process.env.DATABASE_URL) {
+    if (!process.env.DATABASE_URL && !process.env.SUPABASE_DATABASE_URL) {
       console.error('CRITICAL: DATABASE_URL is missing in environment variables!');
       return NextResponse.json(
         {
           error: 'DATABASE_URL environment variable is missing on Netlify',
-          details: 'Please add DATABASE_URL in Netlify Site Configuration -> Environment Variables.',
+          details: 'Please add DATABASE_URL (or SUPABASE_DATABASE_URL) in Netlify Site Configuration -> Environment Variables.',
         },
         { status: 500 }
       );
