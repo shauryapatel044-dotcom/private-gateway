@@ -14,7 +14,9 @@ import {
   EyeOff,
   Send,
   RefreshCw,
-  FolderTree
+  FolderTree,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 
 export default function AdminSettingsPage() {
@@ -29,6 +31,37 @@ export default function AdminSettingsPage() {
   const [testingWebhook, setTestingWebhook] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ text: string; error?: boolean } | null>(null);
   const [webhookTestResult, setWebhookTestResult] = useState<{ text: string; error?: boolean } | null>(null);
+  const [clearingHistory, setClearingHistory] = useState(false);
+  const [clearHistoryMsg, setClearHistoryMsg] = useState<{ text: string; error?: boolean } | null>(null);
+
+  const handleClearTransactions = async () => {
+    if (
+      !confirm(
+        '⚠️ ARE YOU SURE? This will permanently delete ALL customer transactions, orders, and phone notification logs. Gateway settings and API keys will NOT be affected.'
+      )
+    ) {
+      return;
+    }
+
+    setClearingHistory(true);
+    setClearHistoryMsg(null);
+
+    try {
+      const res = await fetch('/api/admin/transactions?clearAll=true', {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setClearHistoryMsg({ text: `✓ ${data.message || 'All transaction history cleared successfully!'}` });
+      } else {
+        setClearHistoryMsg({ text: data.error || 'Failed to clear transaction history', error: true });
+      }
+    } catch (err: any) {
+      setClearHistoryMsg({ text: `Network error: ${err.message}`, error: true });
+    } finally {
+      setClearingHistory(false);
+    }
+  };
 
   useEffect(() => {
     fetch('/api/admin/settings')
@@ -317,6 +350,52 @@ export default function AdminSettingsPage() {
           </button>
         </div>
       </form>
+
+      {/* Danger Zone: Clear Transaction History */}
+      <div className="glass-card p-6 rounded-2xl border border-red-500/20 bg-red-500/5 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-red-500/10 pb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-red-500/10 text-red-400">
+              <Trash2 className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-white text-sm">Clear All Transaction History</h3>
+              <p className="text-xs text-slate-400">
+                Permanently wipes all orders, transactions, and phone notification logs from the database
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleClearTransactions}
+            disabled={clearingHistory}
+            className="py-2.5 px-4 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 text-xs font-bold flex items-center gap-2 transition-all shrink-0 hover:text-white disabled:opacity-40"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span>{clearingHistory ? 'Clearing Records...' : 'Clear All Transactions'}</span>
+          </button>
+        </div>
+
+        {clearHistoryMsg && (
+          <div
+            className={`p-3 rounded-xl text-xs ${
+              clearHistoryMsg.error
+                ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+            }`}
+          >
+            {clearHistoryMsg.text}
+          </div>
+        )}
+
+        <div className="flex items-start gap-2 text-[11px] text-slate-400">
+          <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+          <span>
+            This operation resets all order counters and history back to a clean state. Your gateway UPI ID, Gmail IMAP credentials, and API Keys will <strong>NOT</strong> be deleted.
+          </span>
+        </div>
+      </div>
     </div>
   );
 }

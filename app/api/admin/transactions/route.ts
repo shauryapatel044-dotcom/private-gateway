@@ -65,3 +65,40 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  try {
+    const admin = await getCurrentAdmin();
+    if (!admin) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(req.url);
+    const clearAll = searchParams.get('clearAll');
+
+    if (clearAll === 'true') {
+      const [deletedTx, deletedLogs] = await Promise.all([
+        prisma.transaction.deleteMany({}),
+        prisma.notificationLog.deleteMany({}),
+      ]);
+
+      return NextResponse.json({
+        success: true,
+        message: `Successfully cleared ${deletedTx.count} transactions and ${deletedLogs.count} notification logs.`,
+        deletedTransactions: deletedTx.count,
+        deletedLogs: deletedLogs.count,
+      });
+    }
+
+    return NextResponse.json(
+      { error: 'Invalid operation. Set clearAll=true to confirm.' },
+      { status: 400 }
+    );
+  } catch (error: any) {
+    console.error('Error clearing transactions:', error);
+    return NextResponse.json(
+      { error: 'Failed to clear transaction history', details: error.message },
+      { status: 500 }
+    );
+  }
+}
