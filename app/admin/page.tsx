@@ -15,7 +15,8 @@ import {
   Plus,
   ArrowUpDown,
   Filter,
-  Mail
+  Bell,
+  Smartphone
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -144,7 +145,7 @@ export default function AdminOverviewPage() {
         <div>
           <h1 className="text-2xl font-black tracking-tight text-white">Payment Gateway Overview</h1>
           <p className="text-xs text-slate-400 mt-1">
-            Real-time reconciliation of OmniCard & FamPay UPI payments via Gmail IMAP.
+            Real-time reconciliation of OmniCard UPI payments via Android Listener App.
           </p>
         </div>
 
@@ -157,10 +158,10 @@ export default function AdminOverviewPage() {
             <RefreshCw className="w-4 h-4" />
           </button>
           <Link
-            href="/admin/emails"
+            href="/admin/notifications"
             className="py-2.5 px-4 rounded-xl glass-card hover:bg-white/5 text-amber-400 border border-amber-500/30 flex items-center gap-2 text-xs font-bold transition-all shadow-sm"
           >
-            <Mail className="w-4 h-4" /> OmniCard Gmails
+            <Bell className="w-4 h-4" /> Phone Notifications
           </Link>
           <button
             onClick={() => setShowCreateModal(true)}
@@ -186,7 +187,7 @@ export default function AdminOverviewPage() {
             ₹{stats.totalRevenue.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
           </div>
           <p className="text-[11px] text-emerald-400 flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3" /> Reconciled via IMAP
+            <CheckCircle2 className="w-3 h-3" /> Reconciled via Android App
           </p>
         </div>
 
@@ -225,7 +226,7 @@ export default function AdminOverviewPage() {
             </div>
           </div>
           <div className="text-2xl font-extrabold text-amber-400">{stats.pendingCount}</div>
-          <p className="text-[11px] text-slate-400">Awaiting bank confirmation email</p>
+          <p className="text-[11px] text-slate-400">Awaiting OmniCard notification</p>
         </div>
       </div>
 

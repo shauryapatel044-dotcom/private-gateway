@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import { extractAmounts, extractUtrs } from '@/lib/imap-sync';
+import { extractAmounts, extractUtrs } from '@/lib/upi-parser';
 import { fireWebhook } from '@/lib/webhook';
 
 export const dynamic = 'force-dynamic';

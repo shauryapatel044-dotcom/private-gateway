@@ -51,7 +51,7 @@ export default function AdminLoginPage() {
           </div>
           <h1 className="text-xl font-extrabold text-white">Merchant Admin Login</h1>
           <p className="text-xs text-slate-400">
-            Access your UPI Gateway and IMAP reconciliation engine
+            Access your UPI Gateway and notification reconciliation engine
           </p>
         </div>
 

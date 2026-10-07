@@ -14,8 +14,6 @@ CREATE TABLE IF NOT EXISTS "Admin" (
 CREATE TABLE IF NOT EXISTS "GatewayConfig" (
     "id" TEXT PRIMARY KEY DEFAULT 'default',
     "upiId" TEXT NOT NULL DEFAULT '9726147047@omni',
-    "imapEmail" TEXT NOT NULL DEFAULT '',
-    "imapAppPassword" TEXT NOT NULL DEFAULT '',
     "webhookUrl" TEXT NOT NULL DEFAULT '',
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

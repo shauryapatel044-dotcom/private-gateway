@@ -9,13 +9,13 @@ import {
   Layers,
   ArrowRight,
   QrCode,
-  Mail,
+  Globe,
   RefreshCw,
   ExternalLink,
   Lock,
   Cpu,
   CheckCircle2,
-  FolderTree,
+  Bell,
   FlaskConical,
   Activity
 } from 'lucide-react';
@@ -139,12 +139,12 @@ export default function HomePage() {
             </div>
 
             <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white leading-tight">
-              Instant UPI Reconciliation via <span className="gold-gradient-text">Android Listener & IMAP</span>
+              Instant UPI Reconciliation via <span className="gold-gradient-text">Android Notification Listener</span>
             </h1>
 
             <p className="text-slate-400 text-sm sm:text-base leading-relaxed">
-              Bypass official aggregator rejections for OmniCard and FamPay prepaid accounts.
-              Our dual engine intercepts push notifications on your phone in &lt;50ms, parses 18-digit transaction IDs and 12-digit UPI UTRs, and fires webhook confirmations automatically.
+              Bypass official aggregator rejections for OmniCard prepaid accounts.
+              Our dedicated Android listener intercepts push notifications on your phone in &lt;50ms, parses 18-digit transaction IDs and 12-digit UPI UTRs, and updates orders automatically.
             </p>
 
             {/* Feature Cards Grid */}
@@ -167,10 +167,10 @@ export default function HomePage() {
 
               <div className="glass-card p-3.5 rounded-xl border border-white/5 space-y-1">
                 <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center">
-                  <FolderTree className="w-4 h-4" />
+                  <Globe className="w-4 h-4" />
                 </div>
-                <h4 className="font-bold text-xs text-white">Multi-Folder IMAP</h4>
-                <p className="text-[11px] text-slate-400">Scans Inbox, Spam, and Trash for delayed receipts.</p>
+                <h4 className="font-bold text-xs text-white">Instant Webhooks</h4>
+                <p className="text-[11px] text-slate-400">Dispatches real-time callbacks on payment confirmation.</p>
               </div>
             </div>
           </div>

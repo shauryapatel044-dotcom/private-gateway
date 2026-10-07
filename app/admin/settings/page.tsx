@@ -3,28 +3,22 @@
 import React, { useEffect, useState } from 'react';
 import {
   Save,
-  KeyRound,
-  Mail,
   QrCode,
   Globe,
   CheckCircle2,
   AlertCircle,
   HelpCircle,
-  Eye,
-  EyeOff,
   Send,
-  RefreshCw,
-  FolderTree,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  Smartphone,
+  Copy,
+  Check
 } from 'lucide-react';
 
 export default function AdminSettingsPage() {
   const [upiId, setUpiId] = useState('');
-  const [imapEmail, setImapEmail] = useState('');
-  const [imapAppPassword, setImapAppPassword] = useState('');
   const [webhookUrl, setWebhookUrl] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -33,6 +27,25 @@ export default function AdminSettingsPage() {
   const [webhookTestResult, setWebhookTestResult] = useState<{ text: string; error?: boolean } | null>(null);
   const [clearingHistory, setClearingHistory] = useState(false);
   const [clearHistoryMsg, setClearHistoryMsg] = useState<{ text: string; error?: boolean } | null>(null);
+  const [copiedWebhook, setCopiedWebhook] = useState(false);
+  const [hostUrl, setHostUrl] = useState('');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setHostUrl(`${window.location.origin}/api/notification-webhook`);
+    }
+
+    fetch('/api/admin/settings')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data) {
+          setUpiId(data.upiId || '');
+          setWebhookUrl(data.webhookUrl || '');
+        }
+      })
+      .catch((err) => console.error('Failed to load settings:', err))
+      .finally(() => setLoading(false));
+  }, []);
 
   const handleClearTransactions = async () => {
     if (
@@ -63,23 +76,6 @@ export default function AdminSettingsPage() {
     }
   };
 
-  useEffect(() => {
-    fetch('/api/admin/settings')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data) {
-          setUpiId(data.upiId || '');
-          setImapEmail(data.imapEmail || '');
-          setWebhookUrl(data.webhookUrl || '');
-          if (data.imapAppPassword) {
-            setImapAppPassword(data.imapAppPassword);
-          }
-        }
-      })
-      .catch((err) => console.error('Failed to load settings:', err))
-      .finally(() => setLoading(false));
-  }, []);
-
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -91,30 +87,29 @@ export default function AdminSettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           upiId,
-          imapEmail,
-          imapAppPassword,
           webhookUrl,
         }),
       });
 
       const data = await res.json();
       if (res.ok) {
-        setStatusMsg({ text: 'Gateway configuration saved successfully!' });
+        setStatusMsg({ text: 'Gateway configuration updated successfully!' });
       } else {
-        setStatusMsg({ text: data.error || 'Failed to save settings', error: true });
+        setStatusMsg({ text: data.error || 'Failed to update settings', error: true });
       }
-    } catch {
-      setStatusMsg({ text: 'Network error saving settings', error: true });
+    } catch (err: any) {
+      setStatusMsg({ text: `Network error: ${err.message}`, error: true });
     } finally {
       setSaving(false);
     }
   };
 
   const handleTestWebhook = async () => {
-    if (!webhookUrl) {
+    if (!webhookUrl.trim()) {
       setWebhookTestResult({ text: 'Please enter a webhook URL first.', error: true });
       return;
     }
+
     setTestingWebhook(true);
     setWebhookTestResult(null);
 
@@ -122,228 +117,191 @@ export default function AdminSettingsPage() {
       const res = await fetch('/api/admin/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          webhookUrl,
-          testWebhook: true,
-        }),
+        body: JSON.stringify({ testWebhook: true, webhookUrl }),
       });
-
       const data = await res.json();
       if (data.success) {
         setWebhookTestResult({ text: data.message });
       } else {
-        setWebhookTestResult({ text: data.message || 'Webhook failed', error: true });
+        setWebhookTestResult({ text: data.message, error: true });
       }
     } catch (err: any) {
-      setWebhookTestResult({ text: `Failed: ${err.message}`, error: true });
+      setWebhookTestResult({ text: `Webhook test network failure: ${err.message}`, error: true });
     } finally {
       setTestingWebhook(false);
     }
   };
 
+  const copyWebhookUrl = () => {
+    navigator.clipboard.writeText(hostUrl);
+    setCopiedWebhook(true);
+    setTimeout(() => setCopiedWebhook(false), 2000);
+  };
+
   if (loading) {
     return (
-      <div className="py-20 flex justify-center">
-        <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+      <div className="flex items-center justify-center py-20">
+        <div className="w-8 h-8 border-4 border-amber-500/20 border-t-amber-500 rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl space-y-8">
+    <div className="max-w-4xl mx-auto space-y-8">
+      {/* Header */}
       <div>
-        <h1 className="text-2xl font-black tracking-tight text-white">Gateway & Verification Settings</h1>
+        <h1 className="text-2xl font-black text-white tracking-tight">Gateway Settings</h1>
         <p className="text-xs text-slate-400 mt-1">
-          Configure merchant UPI identification, Gmail IMAP credentials, and webhook endpoints.
+          Configure merchant UPI identification, Android notification listener webhook, and external endpoints.
         </p>
       </div>
 
       {statusMsg && (
         <div
-          className={`p-4 rounded-xl flex items-center gap-2.5 text-xs font-semibold ${
+          className={`p-4 rounded-xl text-xs font-semibold flex items-center gap-2 border ${
             statusMsg.error
-              ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-              : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+              ? 'bg-red-500/10 text-red-400 border-red-500/20'
+              : 'bg-green-500/10 text-green-400 border-green-500/20'
           }`}
         >
           {statusMsg.error ? <AlertCircle className="w-4 h-4 shrink-0" /> : <CheckCircle2 className="w-4 h-4 shrink-0" />}
-          <span>{statusMsg.text}</span>
+          {statusMsg.text}
         </div>
       )}
 
       <form onSubmit={handleSave} className="space-y-6">
-        {/* Merchant UPI Configuration */}
-        <div className="glass-card p-6 rounded-2xl border border-white/10 space-y-4">
-          <div className="flex items-center gap-2.5 border-b border-white/10 pb-3">
-            <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-              <QrCode className="w-4 h-4" />
+        {/* UPI Merchant ID */}
+        <div className="glass-card rounded-2xl p-6 border border-white/5 space-y-4">
+          <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+              <QrCode className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-white">Merchant UPI Identifier</h2>
-              <p className="text-[11px] text-slate-400">Used to dynamically generate checkout UPI QR codes</p>
+              <h2 className="text-sm font-bold text-white">Merchant UPI Receiving ID</h2>
+              <p className="text-[11px] text-slate-400">The Virtual Payment Address (VPA) encoded in customer checkout QR codes</p>
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-slate-300">
-              Merchant UPI ID / VPA
-            </label>
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-slate-300">UPI ID / VPA</label>
             <input
               type="text"
               required
               value={upiId}
               onChange={(e) => setUpiId(e.target.value)}
-              placeholder="merchant@fam or yourname@omnicard"
-              className="glass-input w-full px-3.5 py-2.5 rounded-xl text-xs font-mono"
+              placeholder="9726147047@omni"
+              className="w-full bg-slate-900 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500/50"
             />
-            <p className="text-[11px] text-slate-500">
-              Payments sent to this UPI ID will generate incoming transaction confirmation emails in your registered mailbox.
+            <p className="text-[11px] text-slate-500 flex items-center gap-1">
+              <HelpCircle className="w-3.5 h-3.5" />
+              Customer payments will be addressed directly to this VPA.
             </p>
           </div>
         </div>
 
-        {/* Gmail IMAP Configuration */}
-        <div className="glass-card p-6 rounded-2xl border border-white/10 space-y-4">
-          <div className="flex items-center gap-2.5 border-b border-white/10 pb-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
-              <Mail className="w-4 h-4" />
+        {/* Android Notification Listener App Info */}
+        <div className="glass-card rounded-2xl p-6 border border-amber-500/20 bg-amber-500/[0.02] space-y-4">
+          <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+              <Smartphone className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-white">Gmail IMAP Configuration</h2>
-              <p className="text-[11px] text-slate-400">Automated multi-folder email scanning for OmniCard / FamPay receipts</p>
+              <h2 className="text-sm font-bold text-white">Android Notification Listener App</h2>
+              <p className="text-[11px] text-slate-400">Real-time payment capture via background Android app</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-300">
-                Gmail Address
-              </label>
-              <input
-                type="email"
-                required
-                value={imapEmail}
-                onChange={(e) => setImapEmail(e.target.value)}
-                placeholder="merchant.payments@gmail.com"
-                className="glass-input w-full px-3.5 py-2.5 rounded-xl text-xs font-mono"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-medium text-slate-300">
-                  Google App Password (16-char)
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="text-amber-400 hover:text-amber-300 text-xs font-semibold flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 transition-all cursor-pointer"
-                >
-                  {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  <span>{showPassword ? 'Hide Password' : 'Show Password'}</span>
-                </button>
-              </div>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={imapAppPassword}
-                  onChange={(e) => setImapAppPassword(e.target.value)}
-                  placeholder="xxxx xxxx xxxx xxxx"
-                  className="glass-input w-full pl-3.5 pr-10 py-2.5 rounded-xl text-xs font-mono tracking-wider"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-amber-400 transition-colors p-1"
-                  title={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4 text-amber-400" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Folder Coverage Notice */}
-          <div className="bg-slate-900/60 p-3.5 rounded-xl border border-white/5 space-y-1.5 text-[11px]">
-            <div className="flex items-center gap-1.5 text-amber-400 font-semibold">
-              <FolderTree className="w-3.5 h-3.5" /> Multi-Folder Scanning Active
-            </div>
-            <p className="text-slate-400">
-              The engine automatically polls: <code className="text-slate-200">INBOX</code>, <code className="text-slate-200">[Gmail]/Spam</code>, and <code className="text-slate-200">[Gmail]/Trash</code> (or <code className="text-slate-200">[Gmail]/Bin</code>) to ensure transaction emails flagged by Google filters are never missed.
-            </p>
-          </div>
-        </div>
-
-        {/* Webhook Configuration */}
-        <div className="glass-card p-6 rounded-2xl border border-white/10 space-y-4">
-          <div className="flex items-center justify-between border-b border-white/10 pb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-                <Globe className="w-4 h-4" />
-              </div>
-              <div>
-                <h2 className="text-sm font-bold text-white">Merchant Webhook Endpoint</h2>
-                <p className="text-[11px] text-slate-400">Receives verified payment notifications via HTTP POST</p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleTestWebhook}
-              disabled={testingWebhook || !webhookUrl}
-              className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-white/10 text-xs font-medium flex items-center gap-1.5 disabled:opacity-40 transition-colors"
-            >
-              <Send className="w-3 h-3" />
-              {testingWebhook ? 'Dispatching...' : 'Test Webhook'}
-            </button>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-slate-300">
-              Webhook URL
+          <div className="space-y-3">
+            <label className="text-xs font-semibold text-slate-300">
+              Notification Webhook Ingestion URL (Enter this in Android App):
             </label>
-            <input
-              type="url"
-              value={webhookUrl}
-              onChange={(e) => setWebhookUrl(e.target.value)}
-              placeholder="https://yourstore.com/api/payment-webhook"
-              className="glass-input w-full px-3.5 py-2.5 rounded-xl text-xs font-mono"
-            />
-          </div>
-
-          {webhookTestResult && (
-            <div
-              className={`p-3 rounded-xl text-xs ${
-                webhookTestResult.error
-                  ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-                  : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-              }`}
-            >
-              {webhookTestResult.text}
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                readOnly
+                value={hostUrl}
+                className="flex-1 bg-slate-950 border border-white/10 rounded-xl px-4 py-2.5 text-xs font-mono text-amber-400 select-all focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={copyWebhookUrl}
+                className="px-3.5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-white flex items-center gap-1.5 transition-colors"
+              >
+                {copiedWebhook ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+                {copiedWebhook ? 'Copied' : 'Copy'}
+              </button>
             </div>
-          )}
 
-          <div className="bg-slate-950 p-3.5 rounded-xl border border-white/5 space-y-1 font-mono text-[11px] text-slate-400">
-            <p className="text-slate-300 font-semibold mb-1">Webhook JSON Payload Example:</p>
-            <pre className="text-amber-400/90 whitespace-pre-wrap">
-{`{
-  "event": "PAYMENT_SUCCESS",
-  "orderId": "ORD_1728210492_ABC",
-  "amount": 250.00,
-  "utr": "428190184712",
-  "status": "SUCCESS",
-  "timestamp": "2026-10-06T05:00:00.000Z"
-}`}
-            </pre>
+            <div className="p-3 rounded-xl bg-slate-900/80 border border-white/5 space-y-1.5 text-xs text-slate-300">
+              <p className="font-semibold text-amber-300">How it works:</p>
+              <ul className="list-disc list-inside space-y-1 text-slate-400 text-[11px]">
+                <li>Install <code className="text-white">UpiListener.apk</code> on your phone with the OmniCard app.</li>
+                <li>Grant Notification Access to capture payment confirmations automatically.</li>
+                <li>When money arrives, the app sends the notification payload here in real time.</li>
+                <li>View live captured notifications under <strong>Phone Notifications</strong> in the sidebar.</li>
+              </ul>
+            </div>
           </div>
         </div>
 
-        {/* Submit Button */}
-        <div className="flex justify-end">
+        {/* Merchant Webhook Delivery */}
+        <div className="glass-card rounded-2xl p-6 border border-white/5 space-y-4">
+          <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+            <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+              <Globe className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-white">Merchant Webhook URL</h2>
+              <p className="text-[11px] text-slate-400">Receive HTTP POST callbacks whenever a payment is confirmed</p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-slate-300">Webhook Endpoint URL (Optional)</label>
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={webhookUrl}
+                onChange={(e) => setWebhookUrl(e.target.value)}
+                placeholder="https://yourstore.com/api/payment-callback"
+                className="flex-1 bg-slate-900 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500/50"
+              />
+              <button
+                type="button"
+                onClick={handleTestWebhook}
+                disabled={testingWebhook}
+                className="px-4 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-xs font-bold text-slate-200 flex items-center gap-2 transition-colors disabled:opacity-50"
+              >
+                <Send className={`w-3.5 h-3.5 ${testingWebhook ? 'animate-pulse text-amber-400' : ''}`} />
+                {testingWebhook ? 'Testing...' : 'Test'}
+              </button>
+            </div>
+
+            {webhookTestResult && (
+              <div
+                className={`p-3 rounded-xl text-xs font-semibold flex items-center gap-2 border ${
+                  webhookTestResult.error
+                    ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                    : 'bg-green-500/10 text-green-400 border-green-500/20'
+                }`}
+              >
+                {webhookTestResult.error ? (
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                ) : (
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                )}
+                {webhookTestResult.text}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Save Button */}
+        <div className="flex justify-end pt-2">
           <button
             type="submit"
             disabled={saving}
-            className="py-3 px-6 rounded-xl gold-gradient-btn flex items-center gap-2 text-xs font-bold shadow-lg hover:brightness-105 active:scale-95 transition-all disabled:opacity-50"
+            className="gold-gradient-btn px-6 py-2.5 rounded-xl text-xs font-bold shadow-lg flex items-center gap-2 hover:brightness-105 active:scale-95 transition-all"
           >
             <Save className="w-4 h-4" />
             {saving ? 'Saving...' : 'Save Configuration'}
@@ -351,49 +309,49 @@ export default function AdminSettingsPage() {
         </div>
       </form>
 
-      {/* Danger Zone: Clear Transaction History */}
-      <div className="glass-card p-6 rounded-2xl border border-red-500/20 bg-red-500/5 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-red-500/10 pb-4">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-red-500/10 text-red-400">
-              <Trash2 className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-bold text-white text-sm">Clear All Transaction History</h3>
-              <p className="text-xs text-slate-400">
-                Permanently wipes all orders, transactions, and phone notification logs from the database
-              </p>
-            </div>
+      {/* Danger Zone: Reset / Clear Transaction History */}
+      <div className="glass-card rounded-2xl p-6 border border-red-500/30 bg-red-950/10 space-y-4">
+        <div className="flex items-center gap-3 border-b border-red-500/20 pb-4">
+          <div className="w-9 h-9 rounded-xl bg-red-500/20 border border-red-500/30 flex items-center justify-center text-red-400">
+            <AlertTriangle className="w-5 h-5" />
           </div>
-
-          <button
-            type="button"
-            onClick={handleClearTransactions}
-            disabled={clearingHistory}
-            className="py-2.5 px-4 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 text-xs font-bold flex items-center gap-2 transition-all shrink-0 hover:text-white disabled:opacity-40"
-          >
-            <Trash2 className="w-4 h-4" />
-            <span>{clearingHistory ? 'Clearing Records...' : 'Clear All Transactions'}</span>
-          </button>
+          <div>
+            <h2 className="text-sm font-bold text-red-400">Danger Zone: Clear Transaction History</h2>
+            <p className="text-[11px] text-slate-400">Permanently purge all past orders, test transactions, and phone notification logs</p>
+          </div>
         </div>
+
+        <p className="text-xs text-slate-400 leading-relaxed">
+          This operation resets all order counters and history back to a clean state. Your gateway UPI ID and API Keys will <strong>NOT</strong> be deleted.
+        </p>
 
         {clearHistoryMsg && (
           <div
-            className={`p-3 rounded-xl text-xs ${
+            className={`p-3 rounded-xl text-xs font-semibold flex items-center gap-2 border ${
               clearHistoryMsg.error
-                ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-                : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                ? 'bg-red-500/10 text-red-400 border-red-500/20'
+                : 'bg-green-500/10 text-green-400 border-green-500/20'
             }`}
           >
+            {clearHistoryMsg.error ? (
+              <AlertCircle className="w-4 h-4 shrink-0" />
+            ) : (
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+            )}
             {clearHistoryMsg.text}
           </div>
         )}
 
-        <div className="flex items-start gap-2 text-[11px] text-slate-400">
-          <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
-          <span>
-            This operation resets all order counters and history back to a clean state. Your gateway UPI ID, Gmail IMAP credentials, and API Keys will <strong>NOT</strong> be deleted.
-          </span>
+        <div className="pt-2">
+          <button
+            type="button"
+            onClick={handleClearTransactions}
+            disabled={clearingHistory}
+            className="px-4 py-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/40 text-xs font-bold flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50"
+          >
+            <Trash2 className="w-4 h-4" />
+            {clearingHistory ? 'Purging records...' : 'Clear All Transaction History'}
+          </button>
         </div>
       </div>
     </div>

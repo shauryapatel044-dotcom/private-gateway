@@ -159,16 +159,14 @@ export default function CheckoutPage({
     setIsVerifying(true);
     setManualUtrMsg(null);
     try {
-      // Trigger IMAP check
-      await fetch('/api/trigger-imap-sync', { method: 'POST' });
       const updated = await fetchOrderStatus();
       if (updated?.status === 'SUCCESS') {
         // Updated!
       } else {
-        setManualUtrMsg({ text: 'Sync ran: No matching bank email found yet. If you just paid, please allow 10-30 seconds.' });
+        setManualUtrMsg({ text: 'No confirmed payment captured yet. If you just paid, please allow a few seconds for the notification to arrive.' });
       }
     } catch {
-      setManualUtrMsg({ text: 'Failed to verify. Please try again.', error: true });
+      setManualUtrMsg({ text: 'Failed to check status. Please try again.', error: true });
     } finally {
       setIsVerifying(false);
     }
@@ -176,8 +174,9 @@ export default function CheckoutPage({
 
   const handleManualUtrSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!/^\d{12}$/.test(manualUtr.trim())) {
-      setManualUtrMsg({ text: 'UTR must be exactly 12 numeric digits.', error: true });
+    const cleanUtr = manualUtr.trim();
+    if (!/^[0-9a-zA-Z]{10,24}$/.test(cleanUtr)) {
+      setManualUtrMsg({ text: 'Reference / UTR must be 10 to 24 characters.', error: true });
       return;
     }
 
@@ -187,14 +186,14 @@ export default function CheckoutPage({
       const res = await fetch('/api/verify-manual-utr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderId, utr: manualUtr.trim() }),
+        body: JSON.stringify({ orderId, utr: cleanUtr }),
       });
       const data = await res.json();
       if (data.status === 'SUCCESS') {
-        setOrder((prev) => (prev ? { ...prev, status: 'SUCCESS', utr: manualUtr.trim() } : null));
+        setOrder((prev) => (prev ? { ...prev, status: 'SUCCESS', utr: data.utr || cleanUtr } : null));
         setManualUtrMsg({ text: 'Payment confirmed and verified!' });
       } else {
-        setManualUtrMsg({ text: data.message || 'Verification pending email arrival.' });
+        setManualUtrMsg({ text: data.message || 'Verification pending notification capture.' });
       }
     } catch {
       setManualUtrMsg({ text: 'Verification request failed.', error: true });
@@ -275,7 +274,7 @@ export default function CheckoutPage({
             <div>
               <h2 className="text-2xl font-bold text-white">Payment Confirmed!</h2>
               <p className="text-slate-400 text-sm mt-1">
-                Your transaction has been verified via bank confirmation email.
+                Your transaction has been verified via OmniCard payment confirmation.
               </p>
             </div>
 
@@ -473,14 +472,14 @@ export default function CheckoutPage({
                 onClick={handleInstantVerify}
                 disabled={isVerifying}
                 className="text-amber-400 hover:text-amber-300 font-medium inline-flex items-center gap-1 disabled:opacity-50"
-                title="Trigger immediate email sync"
+                title="Check payment status"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isVerifying ? 'animate-spin' : ''}`} />
                 Check Now
               </button>
             </div>
 
-            {/* Manual UTR Fallback Accordion */}
+            {/* Manual Reference / UTR Fallback Accordion */}
             <div className="border-t border-white/5 pt-4 text-xs">
               {!showUtrInput ? (
                 <button
@@ -488,25 +487,25 @@ export default function CheckoutPage({
                   onClick={() => setShowUtrInput(true)}
                   className="text-slate-400 hover:text-amber-300 underline underline-offset-4 text-[11px] block mx-auto transition-colors"
                 >
-                  Already paid? Enter 12-digit UTR manually
+                  Already paid? Enter UTR or Transaction ID manually
                 </button>
               ) : (
                 <form onSubmit={handleManualUtrSubmit} className="space-y-2 bg-slate-900/40 p-3 rounded-xl border border-white/5">
                   <label className="block text-slate-300 font-medium">
-                    Submit Bank UTR / RRN (12 Digits)
+                    Submit UTR or OmniCard Transaction ID
                   </label>
                   <div className="flex gap-2">
                     <input
                       type="text"
-                      maxLength={12}
-                      placeholder="e.g. 428190184712"
+                      maxLength={24}
+                      placeholder="e.g. 300920261924237543 or UTR"
                       value={manualUtr}
-                      onChange={(e) => setManualUtr(e.target.value.replace(/\D/g, ''))}
+                      onChange={(e) => setManualUtr(e.target.value.trim())}
                       className="glass-input flex-1 px-3 py-2 rounded-lg text-xs font-mono tracking-wider"
                     />
                     <button
                       type="submit"
-                      disabled={isVerifying || manualUtr.length !== 12}
+                      disabled={isVerifying || manualUtr.trim().length < 10}
                       className="px-3 py-2 bg-amber-500 text-slate-950 font-bold rounded-lg text-xs hover:bg-amber-400 disabled:opacity-40 transition-colors"
                     >
                       {isVerifying ? 'Verifying...' : 'Submit'}
@@ -530,7 +529,7 @@ export default function CheckoutPage({
           <ShieldCheck className="w-3.5 h-3.5 text-amber-500/70" /> 256-bit Encrypted
         </span>
         <span>•</span>
-        <span>IMAP Multi-Folder Verification</span>
+        <span>Real-time Notification Verification</span>
         <span>•</span>
         <Link href="/admin" className="hover:text-amber-400 transition-colors">
           Admin Portal

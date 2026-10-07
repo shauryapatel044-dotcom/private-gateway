@@ -1,33 +1,38 @@
-# Unofficial UPI Payment Gateway Dashboard (OmniCard / FamPay IMAP Reconciliation)
+# Unofficial UPI Payment Gateway Dashboard (OmniCard Android Notification Sync)
 
-A production-grade, unofficial UPI payment gateway built for personal and prepaid UPI wallets (OmniCard, FamPay, etc.). It bypasses traditional merchant aggregator banking APIs by verifying incoming payments through automated multi-folder Gmail IMAP polling.
+A high-performance, production-grade UPI payment gateway built for personal and prepaid UPI wallets (OmniCard, etc.). It bypasses traditional merchant aggregator banking APIs by verifying incoming payments in real time through an Android background notification listener app.
 
 ---
 
 ## 🚀 Key Features
 
 - **Frontend Customer Checkout (`/checkout/[orderId]`)**:
-  - Dynamically generated UPI QR Code (`qrcode.react`) strictly adhering to the standard UPI intent spec: `upi://pay?pa={upiId}&pn=Merchant&am={amount}&tr={orderId}`.
+  - Dynamically generated UPI QR Code strictly adhering to the standard UPI intent spec: `upi://pay?pa={upiId}&pn=Merchant&am={amount}&tr={orderId}`.
   - Live 15-minute countdown timer with real-time visual progress bar.
   - Active 5-second polling against `/api/order-status`.
   - Mobile deep linking (`Pay via UPI App`), click-to-copy UPI VPA & amount.
-  - Manual 12-digit UTR submission fallback with auto-sync trigger.
+  - Manual Reference / UTR submission fallback with auto-match against captured notifications.
+  - 1-Click Simulation button on test mode checkouts for effortless testing.
   - Smooth animated success state with payment receipt.
 
-- **Multi-Folder IMAP Verification Engine (`/api/trigger-imap-sync`)**:
-  - Connects securely to Gmail IMAP via TLS over port 993.
-  - **Iterates through multiple Gmail folders**: `INBOX`, `[Gmail]/Spam`, and `[Gmail]/Trash` (or `[Gmail]/Bin`).
-  - Filters `UNSEEN` emails for OmniCard and FamPay senders.
-  - Extracts 12-digit UPI reference numbers (UTR / RRN) and amounts via optimized regex engines.
-  - Reconciles amounts against active `PENDING` orders.
-  - Built-in replay attack protection (prevents UTR reuse).
-  - Fires real-time HTTP POST notifications to merchant `webhookUrl`.
+- **Real-Time Android Notification Engine (`/api/notification-webhook`)**:
+  - Receives live notification payloads pushed by `UpiListener.apk` in <50ms.
+  - Extracts 18-digit OmniCard Transaction IDs, 12-digit UPI UTRs, and transaction amounts.
+  - Strips updated wallet balance to prevent false positives.
+  - Automatically matches pending checkout orders by exact amount.
+  - Built-in replay attack protection (prevents reuse of the same UTR).
+  - Fires real-time HTTP POST callbacks to merchant `webhookUrl`.
+
+- **Merchant API Keys Dashboard (`/admin/api-keys`)**:
+  - Create named merchant API keys (`og_live_...`).
+  - Track order counts and last-used timestamps per key.
+  - Revoke or delete keys instantly.
+  - Interactive code integration examples for cURL, Node.js, and Python.
 
 - **Admin Portal (`/admin`)**:
   - **Overview**: Real-time revenue metrics, total transactions, conversion rates, and live transaction table.
-  - **Transactions Table**: Filterable by status (`PENDING`, `SUCCESS`, `FAILED`), searchable by Order ID or UTR.
-  - **Settings (`/admin/settings`)**: Securely manage UPI ID, Gmail address, Google App Password, and Webhook URL. Includes a live Webhook test dispatcher.
-  - **Manual Trigger**: Instant "Trigger IMAP Sync" button with live terminal log output modal.
+  - **Phone Notifications (`/admin/notifications`)**: Live stream of intercepted Android notifications with simulation tools.
+  - **Settings (`/admin/settings`)**: Manage UPI VPA, copy notification webhook endpoint, test outgoing webhooks, and Danger Zone for purging test transaction history.
 
 ---
 
@@ -36,53 +41,9 @@ A production-grade, unofficial UPI payment gateway built for personal and prepai
 - **Framework**: Next.js 14 (App Router)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS (Dark Mode, Glassmorphism, Gold/Amber Accent)
-- **Database**: SQLite via Prisma ORM
-- **Icons**: Lucide Icons
-- **QR Codes**: `qrcode.react`
-- **Email Parser**: `imap-simple`, `mailparser`
+- **Database**: Supabase PostgreSQL (via Prisma ORM & Supavisor Pooler)
+- **Android App**: Kotlin background NotificationListenerService (`UpiListener.apk`)
 - **Authentication**: JWT & Bcrypt
-
----
-
-## 📦 Project Structure
-
-```
-upi-gateway/
-├── prisma/
-│   ├── schema.prisma              # Database schema (Admin, GatewayConfig, Transaction)
-│   └── dev.db                    # SQLite database
-├── lib/
-│   ├── prisma.ts                  # Global Prisma singleton
-│   ├── auth.ts                    # Admin JWT verification & bcrypt hashing
-│   ├── imap-sync.ts               # Core multi-folder IMAP reconciliation engine
-│   └── webhook.ts                 # Webhook dispatcher
-├── app/
-│   ├── layout.tsx                 # Root layout with dark ambient glow
-│   ├── globals.css                # Glassmorphic UI styling
-│   ├── page.tsx                   # Test bench & order launcher
-│   ├── checkout/
-│   │   └── [orderId]/
-│   │       └── page.tsx           # Dynamic Customer Checkout with QR code & 5s polling
-│   ├── admin/
-│   │   ├── layout.tsx             # Protected Admin Layout with sync modal
-│   │   ├── page.tsx               # Admin Overview & Live Transactions Table
-│   │   ├── login/
-│   │   │   └── page.tsx           # Admin Login Page
-│   │   └── settings/
-│   │       └── page.tsx           # UPI ID, IMAP credentials & Webhook settings
-│   └── api/
-│       ├── create-order/          # POST /api/create-order
-│       ├── order-status/          # GET /api/order-status?orderId=...
-│       ├── trigger-imap-sync/     # POST /api/trigger-imap-sync (Multi-folder scan)
-│       ├── verify-manual-utr/     # POST /api/verify-manual-utr
-│       └── admin/
-│           ├── auth/              # Admin login & session check
-│           ├── transactions/      # Aggregated metrics & transaction queries
-│           └── settings/          # Read and update gateway configuration
-└── scripts/
-    ├── seed.js                    # Database seeder (Admin & default config)
-    └── test-mock-sync.js          # Verification test script for IMAP engine
-```
 
 ---
 
@@ -94,45 +55,18 @@ npm run dev
 ```
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### 2. Default Admin Credentials
-- **Username**: `admin`
-- **Password**: `adminpassword123`
+### 2. Admin Portal
 - **Login URL**: [http://localhost:3000/admin/login](http://localhost:3000/admin/login)
-
-### 3. Running Mock IMAP Test Suite
-To verify the end-to-end reconciliation engine without live Gmail credentials:
-```bash
-node scripts/test-mock-sync.js
-```
+- **Default Username**: `admin`
 
 ---
 
-## ✉️ Gmail IMAP Configuration Guide
+## 📱 Android App Setup
 
-1. Go to your Google Account > **Security**.
-2. Ensure **2-Step Verification** is turned ON.
-3. Under **2-Step Verification**, scroll to **App passwords**.
-4. Generate a 16-character App Password (e.g. `abcd efgh ijkl mnop`).
-5. Enter your Gmail address and the 16-character App Password in `/admin/settings`.
-6. Set your merchant UPI ID (e.g. `merchant@fam` or `username@omnicard`).
-
----
-
-## 🔔 Webhook Specification
-
-When a payment is matched and verified, the gateway sends an HTTP POST request to your configured `webhookUrl`:
-
-```json
-{
-  "event": "PAYMENT_SUCCESS",
-  "orderId": "ORD_1728210492_ABC",
-  "amount": 250.00,
-  "utr": "428190184712",
-  "status": "SUCCESS",
-  "timestamp": "2026-10-06T05:00:00.000Z"
-}
-```
-Headers sent:
-- `Content-Type: application/json`
-- `X-Gateway-Event: PAYMENT_SUCCESS`
-- `User-Agent: Unofficial-UPI-Gateway-Webhooks/1.0`
+1. Install `UpiListener.apk` on your Android device with the OmniCard app installed.
+2. Grant **Notification Access** permissions in Android settings when prompted.
+3. In the app settings, set your gateway webhook URL:
+   ```
+   https://<your-domain>/api/notification-webhook
+   ```
+4. Whenever an OmniCard payment notification arrives, it is captured in <50ms and reconciled automatically.

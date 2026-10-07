@@ -17,12 +17,10 @@ model Admin {
 }
 
 model GatewayConfig {
-  id              String   @id @default("default")
-  upiId           String   @default("merchant@upi")
-  imapEmail       String   @default("")
-  imapAppPassword String   @default("")
-  webhookUrl      String   @default("")
-  updatedAt       DateTime @updatedAt
+  id         String   @id @default("default")
+  upiId      String   @default("merchant@upi")
+  webhookUrl String   @default("")
+  updatedAt  DateTime @updatedAt
 }
 
 model ApiKey {

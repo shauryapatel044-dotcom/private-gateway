@@ -28,8 +28,6 @@ async function main() {
     create: {
       id: 'default',
       upiId: '9726147047@omni',
-      imapEmail: '',
-      imapAppPassword: '',
       webhookUrl: '',
     },
   });

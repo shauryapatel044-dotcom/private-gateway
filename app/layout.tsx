@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'UPI Gateway | Automated OmniCard & FamPay Verification',
-  description: 'Production-grade unofficial UPI Payment Gateway with multi-folder IMAP reconciliation.',
+  title: 'UPI Gateway | Automated OmniCard Payment Verification',
+  description: 'Production-grade UPI Payment Gateway with real-time Android notification reconciliation.',
 };
 
 export default function RootLayout({

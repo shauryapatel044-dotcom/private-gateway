@@ -17,18 +17,13 @@ export async function GET() {
       update: {},
       create: {
         id: 'default',
-        upiId: 'merchant@upi',
-        imapEmail: '',
-        imapAppPassword: '',
+        upiId: '9726147047@omni',
         webhookUrl: '',
       },
     });
 
     return NextResponse.json({
       upiId: config.upiId,
-      imapEmail: config.imapEmail,
-      hasAppPassword: Boolean(config.imapAppPassword && config.imapAppPassword.length > 0),
-      imapAppPassword: config.imapAppPassword || '',
       webhookUrl: config.webhookUrl,
       updatedAt: config.updatedAt,
     });
@@ -49,7 +44,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { upiId, imapEmail, imapAppPassword, webhookUrl, testWebhook } = body;
+    const { upiId, webhookUrl, testWebhook } = body;
 
     // Handle test webhook request
     if (testWebhook) {
@@ -78,10 +73,6 @@ export async function POST(req: NextRequest) {
     // Build update object
     const updateData: any = {};
     if (typeof upiId === 'string' && upiId.trim()) updateData.upiId = upiId.trim();
-    if (typeof imapEmail === 'string') updateData.imapEmail = imapEmail.trim();
-    if (typeof imapAppPassword === 'string' && imapAppPassword.trim().length > 0 && !imapAppPassword.includes('••••')) {
-      updateData.imapAppPassword = imapAppPassword.trim();
-    }
     if (typeof webhookUrl === 'string') updateData.webhookUrl = webhookUrl.trim();
 
     const updated = await prisma.gatewayConfig.upsert({
@@ -89,9 +80,7 @@ export async function POST(req: NextRequest) {
       update: updateData,
       create: {
         id: 'default',
-        upiId: upiId || 'merchant@upi',
-        imapEmail: imapEmail || '',
-        imapAppPassword: imapAppPassword || '',
+        upiId: upiId || '9726147047@omni',
         webhookUrl: webhookUrl || '',
       },
     });
@@ -101,8 +90,6 @@ export async function POST(req: NextRequest) {
       message: 'Gateway configuration updated successfully',
       config: {
         upiId: updated.upiId,
-        imapEmail: updated.imapEmail,
-        hasAppPassword: Boolean(updated.imapAppPassword && updated.imapAppPassword.length > 0),
         webhookUrl: updated.webhookUrl,
         updatedAt: updated.updatedAt,
       },
