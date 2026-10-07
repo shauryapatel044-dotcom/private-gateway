@@ -1,0 +1,17 @@
+[build]
+  command = "npm run build"
+
+[build.environment]
+  SECRETS_SCAN_ENABLED = "false"
+
+[secrets_scanning]
+  omit_keys = [
+    "NEXT_PUBLIC_BASE_URL",
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY"
+  ]
+  omit_paths = [
+    ".netlify/**",
+    ".netlify/.next/**",
+    ".next/**"
+  ]
