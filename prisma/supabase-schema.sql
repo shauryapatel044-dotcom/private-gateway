@@ -67,3 +67,9 @@ CREATE INDEX IF NOT EXISTS "NotificationLog_status_idx" ON "NotificationLog" ("s
 INSERT INTO "GatewayConfig" ("id", "upiId")
 VALUES ('default', '9726147047@omni')
 ON CONFLICT ("id") DO NOTHING;
+
+-- Pre-seed Default Admin (username: admin, password: adminpassword123)
+INSERT INTO "Admin" ("id", "username", "passwordHash")
+VALUES ('default-admin', 'admin', '$2a$10$Q.IDtfyL0nw32Tcw6oio7uhsMFHmjr4mn.FKxcEDGCnlLscH1U5RG')
+ON CONFLICT ("username") DO NOTHING;
+

@@ -27,10 +27,10 @@ async function main() {
     update: {},
     create: {
       id: 'default',
-      upiId: 'merchant@fam',
-      imapEmail: 'merchant.payments@gmail.com',
-      imapAppPassword: 'abcd efgh ijkl mnop',
-      webhookUrl: 'https://webhook.site/sample-webhook',
+      upiId: '9726147047@omni',
+      imapEmail: '',
+      imapAppPassword: '',
+      webhookUrl: '',
     },
   });
   console.log(`GatewayConfig initialized with UPI ID: ${config.upiId}`);
