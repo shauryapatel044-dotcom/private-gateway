@@ -13,7 +13,9 @@ import {
   ShieldCheck,
   Smartphone,
   ChevronRight,
-  ArrowLeft
+  ArrowLeft,
+  FlaskConical,
+  Zap
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -48,6 +50,31 @@ export default function CheckoutPage({
   const [manualUtr, setManualUtr] = useState('');
   const [manualUtrMsg, setManualUtrMsg] = useState<{ text: string; error?: boolean } | null>(null);
   const [showUtrInput, setShowUtrInput] = useState(false);
+  const [isSimulating, setIsSimulating] = useState(false);
+
+  const isTestMode = orderId.startsWith('TEST_');
+
+  const handleSimulatePayment = async () => {
+    if (!order) return;
+    setIsSimulating(true);
+    try {
+      const simUtr = `30092026${Date.now().toString().slice(-10)}`;
+      await fetch('/api/notification-webhook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          packageName: 'com.eroute.omnicard',
+          title: 'OmniCard Alert: Money Added',
+          text: `Rs. ${order.amount.toFixed(2)}/- credited to your OmniCard via UPI with Transaction ID ${simUtr}. Updated balance is Rs.1000.00.`,
+        }),
+      });
+      await fetchOrderStatus();
+    } catch (err) {
+      console.error('Failed to simulate payment:', err);
+    } finally {
+      setIsSimulating(false);
+    }
+  };
 
   // Fetch current order status
   const fetchOrderStatus = useCallback(async () => {
@@ -310,6 +337,40 @@ export default function CheckoutPage({
         ) : (
           /* ================= ACTIVE PAYMENT STATE ================= */
           <div className="space-y-6">
+            {/* Mode Banner & Test Simulator */}
+            {isTestMode ? (
+              <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-bold text-amber-400 flex items-center gap-1.5">
+                    <FlaskConical className="w-4 h-4" /> TEST MODE CHECKOUT
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold text-[10px]">
+                    Sandbox
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  This order was created in Test Mode. You can scan the QR code to test mobile scanning, or click below to simulate instant payment verification without transferring real money.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleSimulatePayment}
+                  disabled={isSimulating}
+                  className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md active:scale-98"
+                >
+                  <Zap className="w-4 h-4" />
+                  {isSimulating ? 'Simulating payment confirmation...' : '⚡ Simulate Successful Payment (Instant Verify)'}
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between px-3.5 py-2 rounded-xl bg-slate-900/60 border border-white/5 text-xs text-slate-400">
+                <span className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                  <span className="font-semibold text-emerald-400">Live Production Gateway</span>
+                </span>
+                <span className="text-[11px] text-slate-500">Auto-Verified by Phone Listener</span>
+              </div>
+            )}
+
             {/* Amount & Timer Header */}
             <div className="flex items-center justify-between bg-slate-900/80 border border-white/5 p-4 rounded-xl">
               <div>

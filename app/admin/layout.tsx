@@ -174,12 +174,16 @@ export default function AdminLayout({
           </div>
 
           <div className="flex items-center gap-3">
+            <span className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+              Live Gateway Active
+            </span>
             <Link
               href="/"
               target="_blank"
               className="text-xs text-slate-400 hover:text-white flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 hover:border-amber-500/40 transition-colors"
             >
-              Test Checkout <ExternalLink className="w-3 h-3" />
+              Launch Testbench <ExternalLink className="w-3 h-3" />
             </Link>
           </div>
         </header>

@@ -7,8 +7,8 @@ import Link from 'next/link';
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('adminpassword123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -103,15 +103,7 @@ export default function AdminLoginPage() {
           </div>
         </form>
 
-        <div className="p-3 rounded-xl bg-slate-900/60 border border-white/5 text-[11px] text-slate-400 space-y-1">
-          <p className="font-semibold text-amber-400/90">Default Seed Credentials:</p>
-          <div className="font-mono text-slate-300">
-            Username: <span className="text-white">admin</span>
-          </div>
-          <div className="font-mono text-slate-300">
-            Password: <span className="text-white">adminpassword123</span>
-          </div>
-        </div>
+
 
         <div className="text-center pt-2">
           <Link href="/" className="text-xs text-slate-500 hover:text-amber-400 transition-colors">
