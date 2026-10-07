@@ -1,7 +1,18 @@
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 
-const prisma = new PrismaClient();
+const FALLBACK_DATABASE_URL =
+  'postgresql://postgres.pbalmdgeqarijsgjkykn:pZL75bYTyI0PIUey@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres?pgbouncer=true';
+
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = FALLBACK_DATABASE_URL;
+}
+
+const prisma = new PrismaClient({
+  datasources: {
+    db: { url: process.env.DATABASE_URL || FALLBACK_DATABASE_URL },
+  },
+});
 
 async function main() {
   console.log('--- Seeding Database ---');
